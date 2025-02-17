@@ -6,6 +6,7 @@ import os
 import gzip
 import io
 import json
+import sys
 from pathlib import Path
 
 AML_RES_IMG_VERSION_V1 = 0x01
@@ -50,6 +51,11 @@ def align_data(data: bytes, alignment: int = 16, fill_byte: int = 0x00) -> bytes
     padding = (alignment - (len(data) % alignment)) % alignment
     return data + bytearray([fill_byte] * padding)
 
+def is_bmp(data: bytes) -> bool:
+    """Проверяет, является ли файл BMP по сигнатуре."""
+    return len(data) >= 2 and data[:2] == b'BM'
+
+
 def get_bmp_info(data: bytes):
     """Анализирует BMP-файл и извлекает информацию."""
     header = data[:54]  # Заголовок BMP (54 байта)
@@ -80,7 +86,6 @@ def save_to_json(data, output_file):
     """Сохраняет список данных в JSON-файл."""
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
-    print(f"Данные сохранены в {output_file}")
 
 def load_json(json_file):
     """Загружает JSON-файл"""
@@ -323,15 +328,31 @@ def main():
         unpack_image_file(input_file, output_dir, config_file)
     elif args.pack:
         assets=[]
-        if(os.path.isdir(args.assets[0])):
+        if os.path.isdir(args.assets[0]):
              input_dir=args.assets[0]
              config_file = os.path.join(input_dir, "config.json")
              config=load_json(config_file)
              for item in config:
                 for filename in os.listdir(input_dir):
                      if filename.endswith('.bmp'):
-                         if(filename == item['name']+'.bmp'):
-                             assets.append(os.path.join(input_dir, filename))
+                         if filename == item['name']+ '.bmp':
+                             # сравним с оригиналом, надо чтобы битность и прочее соответствовало
+                            data = bytes()
+                            with open(os.path.join(input_dir, filename), "rb") as f:
+                                data = f.read()
+                            if is_bmp(data):
+                                info=get_bmp_info(data)
+                                del info['compression']
+                                del info['file_size']
+                                differences = {}
+                                for key in info:
+                                    if info[key] != item[key]:
+                                        differences[key] = (info[key], item[key])
+                                if differences:
+                                    print("The " + filename + " does not match the specifications. The picture must be '16bits R5 G6 B5'\n Fix the picture and try again.")
+                                    sys.exit()
+                                else:
+                                    assets.append(os.path.join(input_dir, filename))
         pack_image_file(args.pack, assets, config)
     else:
         list_items(input_file)
