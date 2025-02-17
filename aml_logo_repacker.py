@@ -349,10 +349,13 @@ def main():
                                     if info[key] != item[key]:
                                         differences[key] = (info[key], item[key])
                                 if differences:
-                                    print("The " + filename + " does not match the specifications. The picture must be '16bits R5 G6 B5'\n Fix the picture and try again.")
+                                    print("The " + filename + " does not match the specifications. The picture must be '16bits R5 G6 B5'.\n Fix the picture and try again.")
                                     sys.exit()
                                 else:
                                     assets.append(os.path.join(input_dir, filename))
+                            else:
+                                print("The " + filename + " does not match the specifications. The picture must be BMP with '16bits R5 G6 B5'.\n Fix the picture and try again.")
+                                sys.exit()
         pack_image_file(args.pack, assets, config)
     else:
         list_items(input_file)
