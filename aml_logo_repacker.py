@@ -277,7 +277,7 @@ def unpack_image_file(logo_img_file, output_dir, config_file):
                 file_info['gz_compress'] = compress_level
             file_name=os.path.join(output_dir,name)
             bmp_info=dict()
-            if data[:2] == b'BM':
+            if is_bmp(data):
                 bmp_info=get_bmp_info(data)
             else:
                 bmp_info.clear()
